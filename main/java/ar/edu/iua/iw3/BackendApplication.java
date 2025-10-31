@@ -8,10 +8,12 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+import org.springframework.context.annotation.ComponentScan;
 
 import lombok.extern.slf4j.Slf4j;
 
 @SpringBootApplication
+@ComponentScan(basePackages = {"ar.edu.iua.iw3"}) // <-- AGREGAR ESTA LÍNEA
 @Slf4j
 public class BackendApplication extends SpringBootServletInitializer implements CommandLineRunner {
 

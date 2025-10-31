@@ -1,17 +1,17 @@
 package ar.edu.iua.iw3.model;
 
-import java.io.Serializable;
+import java.io.Serializable; // <- FALTABA ESTE IMPORT
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.Table; // <- FALTABAN TODOS ESTOS IMPORTS
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Setter; // <- FALTABAN TODOS ESTOS IMPORTS DE LOMBOK
 
 @Entity
 @Table(name = "camiones")
@@ -27,7 +27,6 @@ public class Camion implements Serializable {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	// Código Externo para integración (requerido por el PDF)
 	@Column(length = 50, unique = true, nullable = false)
 	private String codExterno; 
 	
@@ -35,8 +34,8 @@ public class Camion implements Serializable {
 	private String patente;
 	
 	@Column(length = 255)
-	private String descripcion; // Opcional
+	private String descripcion;
 	
 	@Column(length = 100)
-	private String cisternado; // Detalle del volumen de las cisternas
+	private String cisternado;
 }

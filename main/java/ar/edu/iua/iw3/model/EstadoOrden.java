@@ -4,7 +4,7 @@ import lombok.Getter;
 
 @Getter
 public enum EstadoOrden {
-    // Definiciones según Página 6 del PDF
+    // Es CRUCIAL que el ID 1 se asocie al primer estado.
     ESTADO_1_PENDIENTE_PESAJE_INICIAL(1, "Pendiente de pesaje inicial"), 
     ESTADO_2_CON_PESAJE_INICIAL_REGISTRADO(2, "Con pesaje inicial registrado"),
     ESTADO_3_CERRADA_PARA_CARGA(3, "Cerrada para carga"),
