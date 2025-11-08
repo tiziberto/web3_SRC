@@ -15,4 +15,5 @@ public interface CamionRepository extends JpaRepository<Camion, Long> {
     
     // Búsqueda por patente (identificador único de negocio)
     Optional<Camion> findOneByPatente(String patente);
+
 }

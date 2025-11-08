@@ -80,4 +80,28 @@ public class ClienteBusiness implements IClienteBusiness {
             throw BusinessException.builder().ex(e).build();
         }
     }
+
+    @Override
+    public Cliente save(Cliente cliente) throws BusinessException {
+        try {
+            return clienteDAO.save(cliente);
+        } catch (Exception e) {
+            throw new BusinessException(e);
+        }
+    }
+
+    @Override
+    public Cliente loadByRazonSocial(String razonSocial) throws NotFoundException, BusinessException {
+        Optional<Cliente> r;
+        try {
+            r = clienteDAO.findOneByRazonSocial(razonSocial); // <-- Llama al repositorio
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw BusinessException.builder().ex(e).build();
+        }
+        if (r.isEmpty()) {
+            throw NotFoundException.builder().message("No se encuentra el Cliente con razón social=" + razonSocial).build();
+        }
+        return r.get();
+    }
 }

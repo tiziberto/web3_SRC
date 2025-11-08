@@ -8,4 +8,6 @@ public interface IClienteBusiness {
     Cliente add(Cliente cliente) throws FoundException, BusinessException;
     Cliente update(Cliente cliente) throws NotFoundException, BusinessException;
     void delete(long id) throws NotFoundException, BusinessException;
+    Cliente save(Cliente cliente) throws BusinessException;
+    Cliente loadByRazonSocial(String razonSocial) throws NotFoundException, BusinessException;
 }

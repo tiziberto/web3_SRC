@@ -45,6 +45,15 @@ public class CamionBusiness implements ICamionBusiness {
     }
 
     @Override
+    public Camion save(Camion camion) throws BusinessException {
+        try {
+            return camionDAO.save(camion);
+        } catch (Exception e) {
+            throw BusinessException.builder().ex(e).build();
+        }
+    }
+
+    @Override
     public Camion add(Camion camion) throws FoundException, BusinessException {
         // Verificar si existe por codExterno o patente
         if (camionDAO.findOneByCodExterno(camion.getCodExterno()).isPresent() || 
@@ -80,5 +89,20 @@ public class CamionBusiness implements ICamionBusiness {
             log.error(e.getMessage(), e);
             throw BusinessException.builder().ex(e).build();
         }
+    }
+
+    @Override
+    public Camion loadByPatente(String patente) throws NotFoundException, BusinessException {
+        Optional<Camion> r;
+        try {
+            r = camionDAO.findOneByPatente(patente); // <-- Llama al repositorio
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw BusinessException.builder().ex(e).build();
+        }
+        if (r.isEmpty()) {
+            throw NotFoundException.builder().message("No se encuentra el Camión con patente=" + patente).build();
+        }
+        return r.get();
     }
 }

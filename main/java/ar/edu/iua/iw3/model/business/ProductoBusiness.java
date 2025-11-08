@@ -84,4 +84,28 @@ public class ProductoBusiness implements IProductoBusiness {
             throw BusinessException.builder().ex(e).build();
         }
     }
+
+    @Override
+    public Producto save(Producto producto) throws BusinessException {
+        try {
+            return productoDAO.save(producto);
+        } catch (Exception e) {
+            throw BusinessException.builder().ex(e).build();
+        }
+    }
+
+    @Override
+    public Producto loadByNombre(String nombre) throws NotFoundException, BusinessException {
+        Optional<Producto> r;
+        try {
+            r = productoDAO.findOneByNombre(nombre); // <-- Llama al repositorio
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw BusinessException.builder().ex(e).build();
+        }
+        if (r.isEmpty()) {
+            throw NotFoundException.builder().message("No se encuentra el Producto con nombre=" + nombre).build();
+        }
+        return r.get();
+    }
 }

@@ -8,4 +8,6 @@ public interface IChoferBusiness {
     Chofer add(Chofer chofer) throws FoundException, BusinessException;
     Chofer update(Chofer chofer) throws NotFoundException, BusinessException;
     void delete(long id) throws NotFoundException, BusinessException;
+    Chofer save(Chofer chofer) throws BusinessException;
+    Chofer loadByDocumento(String documento) throws NotFoundException, BusinessException;
 }

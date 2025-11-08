@@ -12,4 +12,6 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     
     // Búsqueda por el código de integración externo (SAP)
     Optional<Cliente> findOneByCodExterno(String codExterno);
+
+    Optional<Cliente> findOneByRazonSocial(String razonSocial);
 }

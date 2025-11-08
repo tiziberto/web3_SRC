@@ -9,12 +9,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import ar.edu.iua.iw3.model.Orden;
+import ar.edu.iua.iw3.model.Producto;
 import ar.edu.iua.iw3.model.EstadoOrden;
 import ar.edu.iua.iw3.model.FlowStartDTO;
 import ar.edu.iua.iw3.model.persistence.OrdenRepository;
 import ar.edu.iua.iw3.model.DetalleCargaDTO;
 import ar.edu.iua.iw3.model.DetalleCarga;
 import ar.edu.iua.iw3.model.persistence.DetalleCargaRepository;
+import ar.edu.iua.iw3.model.Camion;
+import ar.edu.iua.iw3.model.Chofer;
+import ar.edu.iua.iw3.model.Cliente;
 import ar.edu.iua.iw3.model.ConciliacionDTO;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -69,33 +73,152 @@ public class OrdenBusiness implements IOrdenBusiness {
         return r.get();
     }
     
-    // Método Punto 1: Recepción de datos base
-    @Override
-    public Orden add(Orden orden) throws FoundException, BusinessException {
-        if (ordenDAO.findOneByNumeroOrden(orden.getNumeroOrden()).isPresent()) {
-            throw FoundException.builder().message("La Orden Nro=" + orden.getNumeroOrden() + " ya existe.").build();
-        }
+    // --- LÓGICA DE CARGA O CREACIÓN ON-DEMAND ---
 
-        // Validación de existencia de las entidades base
+private Camion loadOrCreateCamion(Camion camion) throws BusinessException, FoundException {
+    // Si trae ID, cargamos por ID (lógica antigua)
+    if (camion.getId() != null && camion.getId() > 0) {
         try {
-            camionBusiness.load(orden.getCamion().getId());
-            choferBusiness.load(orden.getChofer().getId());
-            clienteBusiness.load(orden.getCliente().getId());
-            productoBusiness.load(orden.getProducto().getId());
+            return camionBusiness.load(camion.getId());
         } catch (NotFoundException e) {
-            throw BusinessException.builder().message("Error en entidad asociada: " + e.getMessage()).build();
+            throw BusinessException.builder().message("Camión ID=" + camion.getId() + " no encontrado.").build();
         }
-
-        // Setear estado inicial y fecha de recepción
-        orden.setEstado(EstadoOrden.ESTADO_1_PENDIENTE_PESAJE_INICIAL);
-        orden.setFechaRecepcionInicial(new Date());
-
+    }
+    
+    // Si no trae ID, intentamos cargar por Patente (única)
+    if (camion.getPatente() != null) {
         try {
-            return ordenDAO.save(orden);
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            throw BusinessException.builder().ex(e).build();
+            return camionBusiness.loadByPatente(camion.getPatente());
+        } catch (NotFoundException e) {
+            // Si no existe, lo creamos
+            // Nota: Debes generar codExterno si es nulo. Aquí lo hacemos temporalmente con Patente
+            if (camion.getCodExterno() == null) {
+                 camion.setCodExterno(camion.getPatente());
+            }
+            return camionBusiness.add(camion);
         }
+    }
+    throw BusinessException.builder().message("Datos insuficientes para Camión (falta Patente).").build();
+}
+
+    private Chofer loadOrCreateChofer(Chofer chofer) throws BusinessException, FoundException {
+        if (chofer.getId() != null && chofer.getId() > 0) {
+            try {
+                return choferBusiness.load(chofer.getId());
+            } catch (NotFoundException e) {
+                throw BusinessException.builder().message("Chofer ID=" + chofer.getId() + " no encontrado.").build();
+            }
+        }
+        
+        // Intentamos cargar por Documento (único)
+        if (chofer.getDocumento() != null) {
+            try {
+                return choferBusiness.loadByDocumento(chofer.getDocumento());
+            } catch (NotFoundException e) {
+                // Si no existe, lo creamos
+                if (chofer.getCodExterno() == null) {
+                    chofer.setCodExterno(chofer.getDocumento());
+                }
+                return choferBusiness.add(chofer);
+            }
+        }
+        throw BusinessException.builder().message("Datos insuficientes para Chofer (falta Documento).").build();
+    }
+
+    private Cliente loadOrCreateCliente(Cliente cliente) throws BusinessException, FoundException {
+        // 1. Cargar por ID si es provisto
+        if (cliente.getId() != null && cliente.getId() > 0) {
+            try {
+                return clienteBusiness.load(cliente.getId());
+            } catch (NotFoundException e) {
+                throw BusinessException.builder().message("Cliente ID=" + cliente.getId() + " no encontrado.").build();
+            }
+        }
+        
+        // 2. Intentamos cargar por Razón Social (asumida única)
+        if (cliente.getRazonSocial() != null && !cliente.getRazonSocial().trim().isEmpty()) {
+            String razonSocialKey = cliente.getRazonSocial().trim(); // Usamos el valor limpio para buscar y generar
+            
+            try {
+                return clienteBusiness.loadByRazonSocial(razonSocialKey);
+            } catch (NotFoundException e) {
+                // Si no existe, lo creamos
+                if (cliente.getCodExterno() == null || cliente.getCodExterno().isEmpty()) {
+                    
+                    // --- CORRECCIÓN DE ERROR APLICADA AQUÍ ---
+                    // Aseguramos que el substring se ejecuta sobre un string que no es nulo/vacío
+                    // y limitamos la longitud para evitar el error StringIndexOutOfBoundsException.
+                    
+                    // Limpiamos espacios y tomamos un prefijo seguro (máximo 15 caracteres)
+                    String cleanRazonSocial = razonSocialKey.replaceAll("\\s+", "");
+                    int length = cleanRazonSocial.length();
+                    int prefixLength = Math.min(length, 15);
+                    
+                    cliente.setCodExterno(cleanRazonSocial.substring(0, prefixLength) + "-" + System.currentTimeMillis());
+                }
+                return clienteBusiness.add(cliente);
+            }
+        }
+        throw BusinessException.builder().message("Datos insuficientes para Cliente (falta Razón Social y ID).").build();
+    }
+
+    private Producto loadOrCreateProducto(Producto producto) throws BusinessException, FoundException {
+        if (producto.getId() != null && producto.getId() > 0) {
+            try {
+                return productoBusiness.load(producto.getId());
+            } catch (NotFoundException e) {
+                throw BusinessException.builder().message("Producto ID=" + producto.getId() + " no encontrado.").build();
+            }
+        }
+        
+        // Intentamos cargar por Nombre (único)
+        if (producto.getNombre() != null) {
+            try {
+                return productoBusiness.loadByNombre(producto.getNombre());
+            } catch (NotFoundException e) {
+                // Si no existe, lo creamos
+                if (producto.getCodExterno() == null) {
+                    producto.setCodExterno(producto.getNombre());
+                }
+                return productoBusiness.add(producto);
+            }
+        }
+        throw BusinessException.builder().message("Datos insuficientes para Producto (falta Nombre).").build();
+        }
+
+        // Método Punto 1: Recepción de datos base
+        @Override
+        public Orden add(Orden orden) throws FoundException, BusinessException {
+            if (ordenDAO.findOneByNumeroOrden(orden.getNumeroOrden()).isPresent()) {
+                throw FoundException.builder().message("La Orden Nro=" + orden.getNumeroOrden() + " ya existe.").build();
+            }
+
+            // --- NUEVA LÓGICA DE CARGA O CREACIÓN ON-DEMAND ---
+            try {
+                // Se utiliza la lógica de load/add en el Business auxiliar.
+                // Si el ID es null, intenta cargar por campos únicos y la crea si es necesario.
+                
+                // Reemplazar los objetos en la orden con las versiones persistidas/existentes
+                orden.setCamion(loadOrCreateCamion(orden.getCamion()));
+                orden.setChofer(loadOrCreateChofer(orden.getChofer()));
+                orden.setCliente(loadOrCreateCliente(orden.getCliente()));
+                orden.setProducto(loadOrCreateProducto(orden.getProducto())); 
+            } catch (FoundException e) {
+                // Reenviar FoundException si la lógica de negocio auxiliar la lanza
+                throw e;
+            }
+
+
+            // Setear estado inicial y fecha de recepción
+            orden.setEstado(EstadoOrden.ESTADO_1_PENDIENTE_PESAJE_INICIAL);
+            orden.setFechaRecepcionInicial(new Date());
+
+            try {
+                return ordenDAO.save(orden);
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
+                throw BusinessException.builder().ex(e).build();
+            }
     }
     
     // Método Punto 2: Registro de tara

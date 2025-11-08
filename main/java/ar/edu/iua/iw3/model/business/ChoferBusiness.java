@@ -84,4 +84,28 @@ public class ChoferBusiness implements IChoferBusiness {
             throw BusinessException.builder().ex(e).build();
         }
     }
+
+    @Override
+    public Chofer save(Chofer chofer) throws BusinessException {
+        try {
+            return choferDAO.save(chofer);
+        } catch (Exception e) {
+            throw new BusinessException(e);
+        }
+    }
+
+    @Override
+    public Chofer loadByDocumento(String documento) throws NotFoundException, BusinessException {
+        Optional<Chofer> r;
+        try {
+            r = choferDAO.findOneByDocumento(documento); // <-- Llama al repositorio
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw BusinessException.builder().ex(e).build();
+        }
+        if (r.isEmpty()) {
+            throw NotFoundException.builder().message("No se encuentra el Chofer con documento=" + documento).build();
+        }
+        return r.get();
+    }
 }

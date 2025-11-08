@@ -30,7 +30,7 @@ import java.util.Map;
 
 
 @RestController
-@RequestMapping("/api/v1/ordenes")
+@RequestMapping(Constants.URL_ORDENES)
 @Tag(description = "API para la administración de Órdenes de Carga", name = "Ordenes")
 public class OrdenRestController extends BaseRestController {
 
