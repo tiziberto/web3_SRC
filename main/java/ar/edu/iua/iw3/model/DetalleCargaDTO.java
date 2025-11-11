@@ -14,7 +14,7 @@ public class DetalleCargaDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private Integer numeroOrden;
-    // Se usa la contraseña para identificar la Orden en proceso
+
     private String passwordActivacion; 
 
     // Datos de detalle recibidos

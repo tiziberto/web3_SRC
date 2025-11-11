@@ -31,8 +31,8 @@ public class Cliente implements Serializable {
 	private String codExterno;
 
 	@Column(length = 255, nullable = false)
-	private String razonSocial; // Requerido
+	private String razonSocial; 
 	
 	@Column(length = 100)
-	private String contacto; // Opcional
+	private String contacto; 
 }

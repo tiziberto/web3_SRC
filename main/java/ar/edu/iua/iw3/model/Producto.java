@@ -31,8 +31,8 @@ public class Producto implements Serializable {
 	private String codExterno;
 
 	@Column(length = 100, unique = true, nullable = false)
-	private String nombre; // Requerido
+	private String nombre; 
 	
 	@Column(length = 255)
-	private String descripcion; // Opcional
+	private String descripcion; 
 }

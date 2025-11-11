@@ -1,17 +1,17 @@
 package ar.edu.iua.iw3.model;
 
-import java.io.Serializable; // <- FALTABA ESTE IMPORT
+import java.io.Serializable; 
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table; // <- FALTABAN TODOS ESTOS IMPORTS
+import jakarta.persistence.Table; 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter; // <- FALTABAN TODOS ESTOS IMPORTS DE LOMBOK
+import lombok.Setter; 
 
 @Entity
 @Table(name = "camiones")

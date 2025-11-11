@@ -34,9 +34,9 @@ public class OpenApiConfig {
                        .description("API Backend - Ing Web 3")
                        .version("v1.0")
                        .contact(new Contact()
-                               .name("magm")
-                               .url("https://github.com/magm3333")
-                               .email("magm@iua.edu.ar"))
+                               .name("Mousist - Bertorello")
+                               .url("https://github.com/tiziberto")
+                               .email("mbertorello972@iua.edu.ar"))
                        .termsOfService("TOC")
                        .license(new License().name("License").url("#"))
                );

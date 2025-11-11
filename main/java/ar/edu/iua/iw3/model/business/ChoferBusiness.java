@@ -98,7 +98,7 @@ public class ChoferBusiness implements IChoferBusiness {
     public Chofer loadByDocumento(String documento) throws NotFoundException, BusinessException {
         Optional<Chofer> r;
         try {
-            r = choferDAO.findOneByDocumento(documento); // <-- Llama al repositorio
+            r = choferDAO.findOneByDocumento(documento);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw BusinessException.builder().ex(e).build();

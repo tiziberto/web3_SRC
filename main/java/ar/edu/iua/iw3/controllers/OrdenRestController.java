@@ -23,7 +23,6 @@ import ar.edu.iua.iw3.util.IStandartResponseBusiness;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ar.edu.iua.iw3.model.ConciliacionDTO;
 import ar.edu.iua.iw3.model.DetalleCargaDTO;
-import ar.edu.iua.iw3.model.FlowStartDTO;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,36 +34,32 @@ import java.util.Map;
 public class OrdenRestController extends BaseRestController {
 
     @Autowired
-    private IOrdenBusiness ordenBusiness; // Inyección de lógica de negocio
+    private IOrdenBusiness ordenBusiness; 
     @Autowired
     private IStandartResponseBusiness response;
 
-    // --- PUNTO 1: RECEPCIÓN DE DATOS BASE (POST) ---
+    // PUNTO 1: RECEPCIÓN DE DATOS / CREAR ORDEN (POST)
     // Crea la orden en Estado 1: Pendiente de pesaje inicial.
     // URL: POST /api/v1/ordenes
     @PostMapping(value = "")
     public ResponseEntity<?> add(@RequestBody Orden orden) {
         try {
             Orden result = ordenBusiness.add(orden);
-            HttpHeaders responseHeaders = new HttpHeaders();
-            
+            HttpHeaders responseHeaders = new HttpHeaders();  
             // Retorna la URL del nuevo recurso creado
             responseHeaders.set("location", "/api/v1/ordenes/" + result.getNumeroOrden());
             return new ResponseEntity<>(responseHeaders, HttpStatus.CREATED);
             
-        } catch (BusinessException e) {
-            // Se usa Internal Server Error (500) para fallos de lógica o BD
-            return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (FoundException e) {
-            // Error 409 Conflict si la orden ya existe
+        } catch (BusinessException e) { // Para fallos de lógica o BD
+            return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (FoundException e) { // Si la orden ya existe
             return new ResponseEntity<>(response.build(HttpStatus.CONFLICT, e, e.getMessage()), HttpStatus.CONFLICT);
         }
     }
 
     // --- PUNTO 2: REGISTRO DE PESAJE INICIAL (PUT) ---
     // Pasa la orden a Estado 2: Con pesaje inicial registrado, y genera la contraseña.
-    // URL: PUT /api/v1/ordenes/{numeroOrden}/tara?tara={peso}
+    // URL: PUT /api/v1/ordenes/{numeroOrden}/tara
     @PutMapping(value = "/{numeroOrden}/tara")
     public ResponseEntity<?> registerInitialWeighing(
         @PathVariable int numeroOrden, 
@@ -72,25 +67,20 @@ public class OrdenRestController extends BaseRestController {
     ) {
         try {
             Orden result = ordenBusiness.registerInitialWeighing(numeroOrden, tara); // Pasa a Estado 2
-            
-            // Devuelve la contraseña de activación
             Map<String, String> responseBody = new HashMap<>();
             responseBody.put("numeroOrden", String.valueOf(result.getNumeroOrden()));
             responseBody.put("estado", result.getEstado().getDescripcion());
-            responseBody.put("passwordActivacion", result.getPasswordActivacion());
-
+            responseBody.put("passwordActivacion", result.getPasswordActivacion()); // Devuelve la contraseña de activación
             return new ResponseEntity<>(responseBody, HttpStatus.OK);
             
         } catch (NotFoundException e) {
             return new ResponseEntity<>(response.build(HttpStatus.NOT_FOUND, e, e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (BusinessException e) {
-            // Error de lógica (ej. estado incorrecto)
+        } catch (BusinessException e) { // Error de lógica por ej. estado incorrecto
             return new ResponseEntity<>(response.build(HttpStatus.CONFLICT, e, e.getMessage()), HttpStatus.CONFLICT);
         }
     }
 
-
-    // --- UTILIDAD: CARGAR ORDEN POR NÚMERO ---
+    // --- UTILIDAD (no requerida en el tp): VER ESTADO ORDEN POR NÚMERO ---
     // Permite verificar el estado de la orden después de la creación/actualización.
     // URL: GET /api/v1/ordenes/{numeroOrden}
     @GetMapping(value = "/{numeroOrden}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -105,21 +95,17 @@ public class OrdenRestController extends BaseRestController {
         }
     }
 
-    // --- PUNTO 3 - FASE 2: RECEPCIÓN DE DATOS CONTINUOS (POST /flow/data) ---
-    // Recibe los datos de detalle en tiempo real.
+    // --- PUNTO 3: RECEPCIÓN DE DATOS CONTINUOS (POST) ---
+    // Recibe los datos de detalle de carga en tiempo real.
     @PostMapping(value = "/flow")
     public ResponseEntity<?> receiveRealTimeData(@RequestBody DetalleCargaDTO data) {
         try {
-            Orden result = ordenBusiness.receiveRealTimeData(data);
-            
-            // Devuelve la cabecera actualizada (últimos valores)
+            Orden result = ordenBusiness.receiveRealTimeData(data); // Devuelve la cabecera actualizada con los ultimos valores
             return new ResponseEntity<>(result, HttpStatus.OK);
             
-        } catch (NotFoundException e) {
-            // Error 404: Contraseña no válida o no existe Orden activa
+        } catch (NotFoundException e) { // Contraseña invalida o no existe Orden activa
             return new ResponseEntity<>(response.build(HttpStatus.NOT_FOUND, e, e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (BusinessException e) {
-            // Error 409 Conflict: Orden no está en Estado 2 (en carga) o falló la persistencia.
+        } catch (BusinessException e) { // Orden no está en Estado 2 
             return new ResponseEntity<>(response.build(HttpStatus.CONFLICT, e, e.getMessage()), HttpStatus.CONFLICT);
         }
     }
@@ -141,13 +127,12 @@ public class OrdenRestController extends BaseRestController {
         } catch (NotFoundException e) {
             return new ResponseEntity<>(response.build(HttpStatus.NOT_FOUND, e, e.getMessage()), HttpStatus.NOT_FOUND);
         } catch (BusinessException e) {
-            // Error si la orden no está en Estado 2.
             return new ResponseEntity<>(response.build(HttpStatus.CONFLICT, e, e.getMessage()), HttpStatus.CONFLICT);
         }
     }
 
-    // --- PUNTO 5 - PARTE 1: REGISTRO DE PESAJE FINAL (PUT) ---
-    // Recibe el pesaje final del TMS y pasa a Estado 4.
+    // --- PUNTO 5 - P1: REGISTRO DE PESAJE FINAL (PUT) ---
+    // Recibe el pesaje final y pasa a Estado 4.
     // URL: PUT /api/v1/ordenes/{numeroOrden}/final-weighing
     @PutMapping(value = "/{numeroOrden}/final-weighing")
     public ResponseEntity<?> registerFinalWeighing(
@@ -171,7 +156,7 @@ public class OrdenRestController extends BaseRestController {
     }
 
 
-    // --- PUNTO 5 - PARTE 2: OBTENER CONCILIACIÓN (GET) ---
+    // --- PUNTO 5 - P2: OBTENER CONCILIACIÓN (GET) ---
     // Devuelve los valores calculados, solo si la orden está en Estado 4.
     // URL: GET /api/v1/ordenes/{numeroOrden}/conciliacion
     @GetMapping(value = "/{numeroOrden}/conciliacion", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -180,8 +165,7 @@ public class OrdenRestController extends BaseRestController {
             ConciliacionDTO conciliacion = ordenBusiness.getConciliacion(numeroOrden);
             return new ResponseEntity<>(conciliacion, HttpStatus.OK);
             
-        } catch (BusinessException e) {
-            // Error si faltan datos para el cálculo o si no está en Estado 4.
+        } catch (BusinessException e) { // Faltan datos para el cálculo o si no está en Estado 4.
             return new ResponseEntity<>(response.build(HttpStatus.CONFLICT, e, e.getMessage()), HttpStatus.CONFLICT);
         } catch (NotFoundException e) {
             return new ResponseEntity<>(response.build(HttpStatus.NOT_FOUND, e, e.getMessage()), HttpStatus.NOT_FOUND);

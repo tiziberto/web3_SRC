@@ -20,8 +20,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// Importante para la deserialización de fechas del JSON de Postman
+
+// Para deserialización
 import com.fasterxml.jackson.annotation.JsonFormat; 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import ar.edu.iua.iw3.util.CamionJsonDeserializer; 
+import ar.edu.iua.iw3.util.ChoferJsonDeserializer;
+import ar.edu.iua.iw3.util.ClienteJsonDeserializer; 
+import ar.edu.iua.iw3.util.ProductoJsonDeserializer;
 
 @Entity
 @Table(name = "ordenes")
@@ -37,39 +43,41 @@ public class Orden implements Serializable {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	// Atributos principales
 	@Column(unique = true, nullable = false)
 	private Integer numeroOrden;
 
-	@Enumerated(EnumType.ORDINAL) // Mapeo del Enum al índice (0, 1, 2, 3...)
+	@Enumerated(EnumType.ORDINAL) 
 	@Column(nullable = false)
 	private EstadoOrden estado = EstadoOrden.ESTADO_1_PENDIENTE_PESAJE_INICIAL;
 	
-	// Relaciones ManyToOne: Un error aquí puede causar el fallo de inicio
 	@ManyToOne
 	@JoinColumn(name = "id_camion", nullable = false)
+    @JsonDeserialize(using = CamionJsonDeserializer.class) 
 	private Camion camion; 
 
 	@ManyToOne
 	@JoinColumn(name = "id_chofer", nullable = false)
+    @JsonDeserialize(using = ChoferJsonDeserializer.class) 
 	private Chofer chofer;
 
 	@ManyToOne
 	@JoinColumn(name = "id_cliente", nullable = false)
+    @JsonDeserialize(using = ClienteJsonDeserializer.class) 
 	private Cliente cliente;
 
 	@ManyToOne
 	@JoinColumn(name = "id_producto", nullable = false)
+    @JsonDeserialize(using = ProductoJsonDeserializer.class) 
 	private Producto producto;
 
 	// Valores Base y Fechas de Proceso
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssZ") // <- IMPORTANTE
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssZ")
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date fechaCargaPrevista; 
 	
 	private Double preset; 
 	
-	// Fechas de Proceso (se llenan en el backend)
+	// Fechas de Proceso 
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date fechaRecepcionInicial;
 	
@@ -90,7 +98,7 @@ public class Orden implements Serializable {
 	private Double pesajeFinal;
 	private String passwordActivacion; 
 	
-	// Últimos valores de cabecera
+	// Últimos valores
 	private Double ultimaMasaAcumulada;
 	private Double ultimaDensidad;
 	private Double ultimaTemperatura;

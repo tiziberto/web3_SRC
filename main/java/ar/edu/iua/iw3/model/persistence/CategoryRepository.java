@@ -9,7 +9,5 @@ import ar.edu.iua.iw3.model.Category;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long>{
-
 	Optional<Category> findOneByCategory(String category);
-	
 }

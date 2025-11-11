@@ -1,7 +1,6 @@
 package ar.edu.iua.iw3.model.business;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Optional;
 import java.util.Random;
 
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Service;
 import ar.edu.iua.iw3.model.Orden;
 import ar.edu.iua.iw3.model.Producto;
 import ar.edu.iua.iw3.model.EstadoOrden;
-import ar.edu.iua.iw3.model.FlowStartDTO;
 import ar.edu.iua.iw3.model.persistence.OrdenRepository;
 import ar.edu.iua.iw3.model.DetalleCargaDTO;
 import ar.edu.iua.iw3.model.DetalleCarga;
@@ -31,7 +29,7 @@ public class OrdenBusiness implements IOrdenBusiness {
     @Autowired
     private OrdenRepository ordenDAO;
     
-    // Dependencias inyectadas: SI ALGUNA DE ESTAS FALLA, EL CONTEXTO NO CARGA
+    // Dependencias inyectadas
     @Autowired 
     private ICamionBusiness camionBusiness;
     @Autowired 
@@ -42,7 +40,6 @@ public class OrdenBusiness implements IOrdenBusiness {
     private IProductoBusiness productoBusiness;
     
     // Métodos load
-
     @Override
     public Orden load(long id) throws NotFoundException, BusinessException {
         Optional<Orden> r;
@@ -75,31 +72,30 @@ public class OrdenBusiness implements IOrdenBusiness {
     
     // --- LÓGICA DE CARGA O CREACIÓN ON-DEMAND ---
 
-private Camion loadOrCreateCamion(Camion camion) throws BusinessException, FoundException {
-    // Si trae ID, cargamos por ID (lógica antigua)
-    if (camion.getId() != null && camion.getId() > 0) {
-        try {
-            return camionBusiness.load(camion.getId());
-        } catch (NotFoundException e) {
-            throw BusinessException.builder().message("Camión ID=" + camion.getId() + " no encontrado.").build();
-        }
-    }
-    
-    // Si no trae ID, intentamos cargar por Patente (única)
-    if (camion.getPatente() != null) {
-        try {
-            return camionBusiness.loadByPatente(camion.getPatente());
-        } catch (NotFoundException e) {
-            // Si no existe, lo creamos
-            // Nota: Debes generar codExterno si es nulo. Aquí lo hacemos temporalmente con Patente
-            if (camion.getCodExterno() == null) {
-                 camion.setCodExterno(camion.getPatente());
+    private Camion loadOrCreateCamion(Camion camion) throws BusinessException, FoundException {
+        // Si trae ID, cargamos por ID (lógica antigua)
+        if (camion.getId() != null && camion.getId() > 0) {
+            try {
+                return camionBusiness.load(camion.getId());
+            } catch (NotFoundException e) {
+                throw BusinessException.builder().message("Camión ID=" + camion.getId() + " no encontrado.").build();
             }
-            return camionBusiness.add(camion);
         }
+        
+        // Si no trae ID, intentamos cargar por Patente (única)
+        if (camion.getPatente() != null) {
+            try {
+                return camionBusiness.loadByPatente(camion.getPatente());
+            } catch (NotFoundException e) {
+                // Si no existe, lo creamos
+                if (camion.getCodExterno() == null) {
+                    camion.setCodExterno(camion.getPatente());
+                }
+                return camionBusiness.add(camion);
+            }
+        }
+        throw BusinessException.builder().message("Datos insuficientes para Camión (falta Patente).").build();
     }
-    throw BusinessException.builder().message("Datos insuficientes para Camión (falta Patente).").build();
-}
 
     private Chofer loadOrCreateChofer(Chofer chofer) throws BusinessException, FoundException {
         if (chofer.getId() != null && chofer.getId() > 0) {
@@ -126,7 +122,6 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
     }
 
     private Cliente loadOrCreateCliente(Cliente cliente) throws BusinessException, FoundException {
-        // 1. Cargar por ID si es provisto
         if (cliente.getId() != null && cliente.getId() > 0) {
             try {
                 return clienteBusiness.load(cliente.getId());
@@ -135,7 +130,7 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
             }
         }
         
-        // 2. Intentamos cargar por Razón Social (asumida única)
+        // Intentamos cargar por Razón Social
         if (cliente.getRazonSocial() != null && !cliente.getRazonSocial().trim().isEmpty()) {
             String razonSocialKey = cliente.getRazonSocial().trim(); // Usamos el valor limpio para buscar y generar
             
@@ -144,12 +139,6 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
             } catch (NotFoundException e) {
                 // Si no existe, lo creamos
                 if (cliente.getCodExterno() == null || cliente.getCodExterno().isEmpty()) {
-                    
-                    // --- CORRECCIÓN DE ERROR APLICADA AQUÍ ---
-                    // Aseguramos que el substring se ejecuta sobre un string que no es nulo/vacío
-                    // y limitamos la longitud para evitar el error StringIndexOutOfBoundsException.
-                    
-                    // Limpiamos espacios y tomamos un prefijo seguro (máximo 15 caracteres)
                     String cleanRazonSocial = razonSocialKey.replaceAll("\\s+", "");
                     int length = cleanRazonSocial.length();
                     int prefixLength = Math.min(length, 15);
@@ -170,8 +159,7 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
                 throw BusinessException.builder().message("Producto ID=" + producto.getId() + " no encontrado.").build();
             }
         }
-        
-        // Intentamos cargar por Nombre (único)
+        // Intentamos cargar por Nombre 
         if (producto.getNombre() != null) {
             try {
                 return productoBusiness.loadByNombre(producto.getNombre());
@@ -184,41 +172,35 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
             }
         }
         throw BusinessException.builder().message("Datos insuficientes para Producto (falta Nombre).").build();
+    }
+
+    // Método Punto 1: Recepción de datos base
+    @Override
+    public Orden add(Orden orden) throws FoundException, BusinessException {
+        if (ordenDAO.findOneByNumeroOrden(orden.getNumeroOrden()).isPresent()) {
+            throw FoundException.builder().message("La Orden Nro=" + orden.getNumeroOrden() + " ya existe.").build();
+        }
+        try {
+            // Usamos load/add en el Business auxiliar.
+            // si ID es null, intenta cargar por campos únicos y la crea si es necesario.
+            orden.setCamion(loadOrCreateCamion(orden.getCamion()));
+            orden.setChofer(loadOrCreateChofer(orden.getChofer()));
+            orden.setCliente(loadOrCreateCliente(orden.getCliente()));
+            orden.setProducto(loadOrCreateProducto(orden.getProducto())); 
+        } catch (FoundException e) {
+            throw e;
         }
 
-        // Método Punto 1: Recepción de datos base
-        @Override
-        public Orden add(Orden orden) throws FoundException, BusinessException {
-            if (ordenDAO.findOneByNumeroOrden(orden.getNumeroOrden()).isPresent()) {
-                throw FoundException.builder().message("La Orden Nro=" + orden.getNumeroOrden() + " ya existe.").build();
-            }
+        // Setear estado inicial y fecha de recepción
+        orden.setEstado(EstadoOrden.ESTADO_1_PENDIENTE_PESAJE_INICIAL);
+        orden.setFechaRecepcionInicial(new Date());
 
-            // --- NUEVA LÓGICA DE CARGA O CREACIÓN ON-DEMAND ---
-            try {
-                // Se utiliza la lógica de load/add en el Business auxiliar.
-                // Si el ID es null, intenta cargar por campos únicos y la crea si es necesario.
-                
-                // Reemplazar los objetos en la orden con las versiones persistidas/existentes
-                orden.setCamion(loadOrCreateCamion(orden.getCamion()));
-                orden.setChofer(loadOrCreateChofer(orden.getChofer()));
-                orden.setCliente(loadOrCreateCliente(orden.getCliente()));
-                orden.setProducto(loadOrCreateProducto(orden.getProducto())); 
-            } catch (FoundException e) {
-                // Reenviar FoundException si la lógica de negocio auxiliar la lanza
-                throw e;
-            }
-
-
-            // Setear estado inicial y fecha de recepción
-            orden.setEstado(EstadoOrden.ESTADO_1_PENDIENTE_PESAJE_INICIAL);
-            orden.setFechaRecepcionInicial(new Date());
-
-            try {
-                return ordenDAO.save(orden);
-            } catch (Exception e) {
-                log.error(e.getMessage(), e);
-                throw BusinessException.builder().ex(e).build();
-            }
+        try {
+            return ordenDAO.save(orden);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw BusinessException.builder().ex(e).build();
+        }
     }
     
     // Método Punto 2: Registro de tara
@@ -254,57 +236,21 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
 
 
     @Autowired
-    private DetalleCargaRepository detalleCargaDAO; // <- Inyectar Repositorio de Detalle
-
-    // Método de soporte para buscar la Orden por contraseña
-    private Orden loadByPassword(String password) throws NotFoundException, BusinessException {
-        Optional<Orden> ou;
-        try {
-            ou = ordenDAO.findOneByPasswordActivacion(password);
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            throw BusinessException.builder().ex(e).build();
-        }
-        if (ou.isEmpty()) {
-            throw NotFoundException.builder().message("No se encuentra Orden activa para la password.").build();
-        }
-        return ou.get();
-    }
-
-    // Implementación del Punto 3
-    private Double handleFlowStart(Orden orden, String passwordActivacion) throws BusinessException {
-        // 1. Validar estado: Solo si está en Estado 2
-        if (orden.getEstado() != EstadoOrden.ESTADO_2_CON_PESAJE_INICIAL_REGISTRADO) {
-            throw BusinessException.builder()
-                .message("La Orden Nro=" + orden.getNumeroOrden() + " no está lista para iniciar la carga (Estado 2). Estado actual: " + orden.getEstado().getDescripcion())
-                .build();
-        }
-
-        // 2. Verificar Contraseña
-        if (!orden.getPasswordActivacion().equals(passwordActivacion)) {
-            throw BusinessException.builder().message("Contraseña de activación incorrecta.").build();
-        }
-
-        // 3. Retornar Preset
-        return orden.getPreset();
-    }
-
+    private DetalleCargaRepository detalleCargaDAO;
 
     // --- IMPLEMENTACIÓN DEL PUNTO 3 UNIFICADO ---
-    
     @Override
     public Orden receiveRealTimeData(DetalleCargaDTO data) throws NotFoundException, BusinessException {
-        //Comprobar que la orden exista
         Orden orden = load(data.getNumeroOrden());
         
-        // 1. Validar estado: Debe ser Estado 2
+        // Validar estado: Debe ser Estado 2
         if (orden.getEstado() != EstadoOrden.ESTADO_2_CON_PESAJE_INICIAL_REGISTRADO) {
             throw BusinessException.builder()
                 .message("La Orden Nro=" + data.getNumeroOrden() + " no está lista para iniciar la carga (Estado 2). Estado actual: " + orden.getEstado().getDescripcion())
                 .build();
         }
 
-        // 2. Verificar Contraseña
+        // Verificar Contraseña
         if (!orden.getPasswordActivacion().equals(data.getPasswordActivacion())) {
             throw BusinessException.builder().message("Contraseña de activación incorrecta.").build();
         }
@@ -317,7 +263,7 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
         boolean datosValidos = isRealTimeDataValid(orden, data);
 
         if (datosValidos) {
-            // 2. Procesar datos: Actualizar cabecera, persistir detalle y chequear alarma
+            // Procesar datos: Actualizar cabecera, persistir detalle y chequear alarma
             updateOrderHeader(orden, data);
             persistDetail(orden, data);
             
@@ -395,22 +341,15 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
         
         Orden orden = load(numeroOrden); // Verifica si la orden existe
 
-        // 1. Validar estado: Solo se puede cerrar si está en Estado 2 (en proceso de carga)
         if (orden.getEstado() != EstadoOrden.ESTADO_2_CON_PESAJE_INICIAL_REGISTRADO) {
             throw BusinessException.builder()
                 .message("La Orden Nro=" + numeroOrden + " no está activa para ser cerrada. Estado actual: " + orden.getEstado().getDescripcion())
                 .build();
         }
 
-        // 2. Registrar Fecha de Fin de Carga (momento del cierre)
-        // La fecha de fin de carga es el momento del último dato válido (Punto 3) o el momento del cierre.
-        // Aquí usamos la fecha del sistema, ya que esta es la acción de "cierre".
         orden.setFechaFinCarga(new Date()); 
-        
-        // 3. Cambiar estado a Estado 3
         orden.setEstado(EstadoOrden.ESTADO_3_CERRADA_PARA_CARGA);
 
-        // 4. Guardar
         try {
             log.info("Orden {} pasa a Estado 3: Cerrada para carga.", numeroOrden);
             return ordenDAO.save(orden);
@@ -420,7 +359,7 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
         }
     }
 
-    @PersistenceContext // Inyección para consultas de BD avanzadas
+    @PersistenceContext // Inyección para consultas de BD avanzadas como los promedios
     private EntityManager entityManager;
 
     // --- PUNTO 5 - PARTE 1: Registrar Pesaje Final (PUT) ---
@@ -428,21 +367,16 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
     public Orden registerFinalWeighing(int numeroOrden, double pesajeFinal) throws NotFoundException, BusinessException {
         Orden orden = load(numeroOrden);
 
-        // 1. Validar estado: Solo si está en Estado 3
         if (orden.getEstado() != EstadoOrden.ESTADO_3_CERRADA_PARA_CARGA) {
             throw BusinessException.builder()
                 .message("La Orden Nro=" + numeroOrden + " no está cerrada. Estado actual: " + orden.getEstado().getDescripcion())
                 .build();
         }
         
-        // 2. Almacenar Pesaje Final y Fecha
         orden.setPesajeFinal(pesajeFinal);
         orden.setFechaPesajeFinal(new Date());
-
-        // 3. Cambiar estado a Estado 4
         orden.setEstado(EstadoOrden.ESTADO_4_FINALIZADA);
 
-        // 4. Guardar
         try {
             log.info("Orden {} pasa a Estado 4: Finalizada. Pesaje final: {}", numeroOrden, pesajeFinal);
             return ordenDAO.save(orden);
@@ -452,13 +386,11 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
         }
     }
 
-
     // --- PUNTO 5 - PARTE 2: Obtener Conciliación (GET) ---
     @Override
     public ConciliacionDTO getConciliacion(int numeroOrden) throws NotFoundException, BusinessException {
         Orden orden = load(numeroOrden);
         
-        // 1. Validar estado: Solo se puede solicitar si está en Estado 4
         if (orden.getEstado() != EstadoOrden.ESTADO_4_FINALIZADA) {
             throw BusinessException.builder()
                 .message("La Orden Nro=" + numeroOrden + " no está finalizada. Estado actual: " + orden.getEstado().getDescripcion())
@@ -469,14 +401,14 @@ private Camion loadOrCreateCamion(Camion camion) throws BusinessException, Found
              throw BusinessException.builder().message("Faltan datos de pesaje o carga para la conciliación.").build();
         }
         
-        // 2. Cálculo de Neto y Diferencia
+        // Cálculo de Neto y Diferencia
         double netoBalanza = orden.getPesajeFinal() - orden.getPesajeInicial();
         double diferenciaBalanzaCaudalimetro = netoBalanza - orden.getUltimaMasaAcumulada();
 
-        // 3. Cálculo de Promedios (Usando el EntityManager)
+        // Cálculo de Promedios (Usando el EntityManager)
         Object[] promedios = calculateAverages(orden.getId());
         
-        // 4. Construir DTO
+        // Construir DTO
         return ConciliacionDTO.builder()
                 .numeroOrden(numeroOrden)
                 .pesajeInicial(orden.getPesajeInicial())

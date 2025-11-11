@@ -31,11 +31,11 @@ public class Chofer implements Serializable {
 	private String codExterno;
 
 	@Column(length = 100, nullable = false)
-	private String nombre; // Requerido
-	
+	private String nombre; 
+
 	@Column(length = 100, nullable = false)
-	private String apellido; // Requerido
+	private String apellido; 
 	
 	@Column(length = 20, unique = true)
-	private String documento; // Opcional
+	private String documento;
 }

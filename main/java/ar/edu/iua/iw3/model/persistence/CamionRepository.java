@@ -9,7 +9,6 @@ import ar.edu.iua.iw3.model.Camion;
 
 @Repository
 public interface CamionRepository extends JpaRepository<Camion, Long> {
-    
     // Búsqueda por el código de integración externo (SAP/TMS)
     Optional<Camion> findOneByCodExterno(String codExterno);
     

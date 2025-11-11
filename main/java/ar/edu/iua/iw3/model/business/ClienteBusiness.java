@@ -94,7 +94,7 @@ public class ClienteBusiness implements IClienteBusiness {
     public Cliente loadByRazonSocial(String razonSocial) throws NotFoundException, BusinessException {
         Optional<Cliente> r;
         try {
-            r = clienteDAO.findOneByRazonSocial(razonSocial); // <-- Llama al repositorio
+            r = clienteDAO.findOneByRazonSocial(razonSocial);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw BusinessException.builder().ex(e).build();

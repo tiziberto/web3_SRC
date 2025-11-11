@@ -9,7 +9,6 @@ import ar.edu.iua.iw3.model.Orden;
 
 @Repository
 public interface OrdenRepository extends JpaRepository<Orden, Long> {
-    
     // Búsqueda principal por Número de Orden (identificador único del proceso)
     Optional<Orden> findOneByNumeroOrden(Integer numeroOrden);
 

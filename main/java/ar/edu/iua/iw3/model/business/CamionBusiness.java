@@ -68,7 +68,6 @@ public class CamionBusiness implements ICamionBusiness {
         }
     }
     
-    // Simplificación de update y delete
     @Override
     public Camion update(Camion camion) throws NotFoundException, BusinessException {
         load(camion.getId());
@@ -95,7 +94,7 @@ public class CamionBusiness implements ICamionBusiness {
     public Camion loadByPatente(String patente) throws NotFoundException, BusinessException {
         Optional<Camion> r;
         try {
-            r = camionDAO.findOneByPatente(patente); // <-- Llama al repositorio
+            r = camionDAO.findOneByPatente(patente);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw BusinessException.builder().ex(e).build();

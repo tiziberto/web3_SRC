@@ -46,11 +46,11 @@ public class ProductoBusiness implements IProductoBusiness {
     
     @Override
     public Producto add(Producto producto) throws FoundException, BusinessException {
-        // 1. Verificar si existe por codExterno
+        // Verificar si existe por codExterno
         if (productoDAO.findOneByCodExterno(producto.getCodExterno()).isPresent()) {
             throw FoundException.builder().message("Ya existe un Producto con codExterno=" + producto.getCodExterno()).build();
         }
-        // 2. Verificar si existe por nombre
+        // Verificar si existe por nombre
         if (productoDAO.findOneByNombre(producto.getNombre()).isPresent()) {
             throw FoundException.builder().message("Ya existe un Producto con nombre=" + producto.getNombre()).build();
         }
@@ -98,7 +98,7 @@ public class ProductoBusiness implements IProductoBusiness {
     public Producto loadByNombre(String nombre) throws NotFoundException, BusinessException {
         Optional<Producto> r;
         try {
-            r = productoDAO.findOneByNombre(nombre); // <-- Llama al repositorio
+            r = productoDAO.findOneByNombre(nombre);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw BusinessException.builder().ex(e).build();

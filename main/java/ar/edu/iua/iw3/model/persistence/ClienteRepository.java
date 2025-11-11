@@ -8,8 +8,7 @@ import org.springframework.stereotype.Repository;
 import ar.edu.iua.iw3.model.Cliente;
 
 @Repository
-public interface ClienteRepository extends JpaRepository<Cliente, Long> {
-    
+public interface ClienteRepository extends JpaRepository<Cliente, Long> {  
     // Búsqueda por el código de integración externo (SAP)
     Optional<Cliente> findOneByCodExterno(String codExterno);
 

@@ -1,20 +1,14 @@
 package ar.edu.iua.iw3.schedules;
 
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
-import ar.edu.iua.iw3.model.business.BusinessException;
 import ar.edu.iua.iw3.util.EmailBusiness;
 import lombok.extern.slf4j.Slf4j;
 

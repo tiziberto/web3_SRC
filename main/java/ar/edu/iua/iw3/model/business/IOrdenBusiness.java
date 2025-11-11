@@ -2,30 +2,26 @@ package ar.edu.iua.iw3.model.business;
 
 import ar.edu.iua.iw3.model.ConciliacionDTO;
 import ar.edu.iua.iw3.model.DetalleCargaDTO;
-import ar.edu.iua.iw3.model.FlowStartDTO;
 import ar.edu.iua.iw3.model.Orden;
 
 public interface IOrdenBusiness {
-    
-    // Métodos Punto 1
+    // --- PUNTO 1: RECEPCION DE DATOS BASE ---
     public Orden load(long id) throws NotFoundException, BusinessException;
     public Orden load(int numeroOrden) throws NotFoundException, BusinessException;
     public Orden add(Orden orden) throws FoundException, BusinessException;
 
-    // Método Punto 2 (CORREGIDO: DEBE DECLARAR LAS EXCEPCIONES)
+    // --- PUNTO 2: REGISTRO DE TARA ---
     public Orden registerInitialWeighing(int numeroOrden, double pesajeInicial) throws NotFoundException, BusinessException;
 
     // --- PUNTO 3: RECEPCIÓN DE DATOS CONTINUOS ---
     public Orden receiveRealTimeData(DetalleCargaDTO data) throws NotFoundException, BusinessException;
 
-    // Nuevo método para el Punto 4: Cierre de la Orden
+    // --- PUNTO 4: CIERRE DE ORDEN ---
     public Orden closeOrder(int numeroOrden) throws NotFoundException, BusinessException;
 
-    // --- PUNTO 5: CONCILIACIÓN (ESTA LÍNEA RESUELVE EL ERROR) ---
-    public ConciliacionDTO getConciliacion(int numeroOrden) 
-        throws NotFoundException, BusinessException;
-    
     // --- PUNTO 5: REGISTRO DE PESAJE FINAL ---
-    public Orden registerFinalWeighing(int numeroOrden, double pesajeFinal) 
-        throws NotFoundException, BusinessException;
+    public Orden registerFinalWeighing(int numeroOrden, double pesajeFinal) throws NotFoundException, BusinessException;
+
+    // --- PUNTO 5: CONCILIACIÓN ---
+    public ConciliacionDTO getConciliacion(int numeroOrden) throws NotFoundException, BusinessException;
 }
