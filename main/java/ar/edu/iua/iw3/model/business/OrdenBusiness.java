@@ -444,4 +444,19 @@ public class OrdenBusiness implements IOrdenBusiness {
             throw BusinessException.builder().message("Error calculando promedios de detalle.").build();
         }
     }
+
+
+    @Override
+    public void delete(int numeroOrden) throws NotFoundException, BusinessException {
+        // 1. Buscamos la orden por número de orden para obtener su ID real
+        Orden orden = load(numeroOrden);
+        
+        try {
+            // 2. Eliminamos usando el ID de la orden cargada
+            ordenDAO.deleteById(orden.getId());
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw BusinessException.builder().ex(e).build();
+        }
+    }
 }

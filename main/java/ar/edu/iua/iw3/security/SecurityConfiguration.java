@@ -43,8 +43,12 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST, "/api/v1/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/register").permitAll()
                 
-                // 2. REQUERIR JWT para todo lo que esté bajo /api/v1/
-                .requestMatchers("/api/v1/**").authenticated() 
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/ordenes/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/ordenes/**").hasAnyRole("ADMIN", "OPERADOR")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/ordenes/**").hasAnyRole("ADMIN", "OPERADOR")
+
+                // 3. El resto de las funciones (GET, etc.) para CUALQUIER rol autenticado
+                .requestMatchers("/api/v1/**").authenticated()
                 
                 // 3. Cualquier otra ruta (como Swagger o errores) se puede denegar o permitir
                 .anyRequest().authenticated()); // Cambiado de permitAll a authenticated para máxima seguridad
