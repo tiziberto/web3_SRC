@@ -35,14 +35,18 @@ public class SecurityConfiguration {
 	}
 
 	@Bean
-	WebMvcConfigurer corsConfigurer() {
-		return new WebMvcConfigurer() {
-			@Override
-			public void addCorsMappings(CorsRegistry registry) {
-				registry.addMapping("/**").allowedMethods("*").allowedHeaders("*").allowedOrigins("*");
-			}
-		};
-	}
+WebMvcConfigurer corsConfigurer() {
+    return new WebMvcConfigurer() {
+        @Override
+        public void addCorsMappings(CorsRegistry registry) {
+            // Permite peticiones desde cualquier origen, método y cabecera
+            registry.addMapping("/**")
+                    .allowedMethods("*")
+                    .allowedHeaders("*")
+                    .allowedOrigins("*");
+        }
+    };
+}
 
 	@Autowired
 	private IUserBusiness userBusiness;
@@ -58,8 +62,15 @@ public class SecurityConfiguration {
         // CORS: https://developer.mozilla.org/es/docs/Web/HTTP/CORS
         // CSRF: https://developer.mozilla.org/es/docs/Glossary/CSRF
         http.csrf(AbstractHttpConfigurer::disable);
+        http.cors(Customizer.withDefaults());
         
         http.authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(HttpMethod.POST, Constants.URL_LOGIN).permitAll()
+                .requestMatchers(HttpMethod.POST, Constants.URL_BASE + "/register").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/register").permitAll() // Permitir registro público
+                
                 // 1. PERMITIR TODAS LAS PETICIONES OPTIONS (PRE-VUELO CORS)
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 

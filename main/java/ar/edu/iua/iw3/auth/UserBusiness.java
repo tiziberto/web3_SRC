@@ -83,5 +83,25 @@ public class UserBusiness implements IUserBusiness {
 		}
 	}
 
+	@Override
+	public User save(User user, PasswordEncoder pEncoder) throws BusinessException {
+		try {
+			// 1. Encriptar la contraseña con BCrypt
+			user.setPassword(pEncoder.encode(user.getPassword()));
+			
+			// 2. Asegurarse de que el usuario esté habilitado por defecto
+			user.setEnabled(true);
+			user.setAccountNonExpired(true);
+			user.setAccountNonLocked(true);
+			user.setCredentialsNonExpired(true);
+			
+			// 3. Guardar en la base de datos
+			return userDAO.save(user);
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			throw BusinessException.builder().ex(e).build();
+		}
+	}
+
 }
 

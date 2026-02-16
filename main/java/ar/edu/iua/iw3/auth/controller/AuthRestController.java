@@ -21,16 +21,21 @@ import org.springframework.web.bind.annotation.RestController;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 
+import ar.edu.iua.iw3.auth.IUserBusiness;
 import ar.edu.iua.iw3.auth.User;
 import ar.edu.iua.iw3.auth.custom.CustomAuthenticationManager;
 import ar.edu.iua.iw3.auth.filters.AuthConstants;
 import ar.edu.iua.iw3.controllers.BaseRestController;
 import ar.edu.iua.iw3.controllers.Constants;
+import ar.edu.iua.iw3.model.business.BusinessException;
 import ar.edu.iua.iw3.util.IStandartResponseBusiness;
 //import ar.edu.iw3.auth.event.UserEvent;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController
+@RequestMapping(Constants.URL_BASE)
 public class AuthRestController extends BaseRestController {
 	@Autowired
 	private AuthenticationManager authManager;
@@ -75,6 +80,21 @@ public class AuthRestController extends BaseRestController {
 		try {
 			return new ResponseEntity<String>(pEncoder.encode(password), HttpStatus.OK);
 		} catch (Exception e) {
+			return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
+					HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	@Autowired
+	private IUserBusiness userBusiness;
+
+	@PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<?> register(@RequestBody User user) {
+		try {
+			// Se pasa el pEncoder (inyectado en el controlador) para el hashing
+			User newUser = userBusiness.save(user, pEncoder);
+			return new ResponseEntity<>(newUser, HttpStatus.CREATED);
+		} catch (BusinessException e) {
 			return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
 					HttpStatus.INTERNAL_SERVER_ERROR);
 		}
