@@ -5,100 +5,57 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
 import ar.edu.iua.iw3.auth.IUserBusiness;
 import ar.edu.iua.iw3.auth.custom.CustomAuthenticationManager;
 import ar.edu.iua.iw3.auth.filters.JWTAuthorizationFilter;
-import ar.edu.iua.iw3.controllers.Constants;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfiguration {
 
-	/* (Bloque de código de configuración de ejemplo, se mantiene comentado) */
+    @Autowired
+    private IUserBusiness userBusiness;
 
-	@Bean
-	PasswordEncoder bCryptPasswordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
+    @Bean
+    public PasswordEncoder bCryptPasswordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-	@Bean
-WebMvcConfigurer corsConfigurer() {
-    return new WebMvcConfigurer() {
-        @Override
-        public void addCorsMappings(CorsRegistry registry) {
-            // Permite peticiones desde cualquier origen, método y cabecera
-            registry.addMapping("/**")
-                    .allowedMethods("*")
-                    .allowedHeaders("*")
-                    .allowedOrigins("*");
-        }
-    };
-}
-
-	@Autowired
-	private IUserBusiness userBusiness;
-
-	@Bean
-	AuthenticationManager authenticationManager() {
-		return new CustomAuthenticationManager(bCryptPasswordEncoder(), userBusiness);
-	}
+    @Bean
+    public AuthenticationManager authenticationManager() {
+        return new CustomAuthenticationManager(bCryptPasswordEncoder(), userBusiness);
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        AuthenticationManager authManager = authenticationManager();
 
-        // CORS: https://developer.mozilla.org/es/docs/Web/HTTP/CORS
-        // CSRF: https://developer.mozilla.org/es/docs/Glossary/CSRF
-        http.csrf(AbstractHttpConfigurer::disable);
-        http.cors(Customizer.withDefaults());
+        http.csrf(csrf -> csrf.disable());
         
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers(HttpMethod.POST, Constants.URL_LOGIN).permitAll()
-                .requestMatchers(HttpMethod.POST, Constants.URL_BASE + "/register").permitAll()
+                // 1. Permitir acceso público a login y registro
                 .requestMatchers(HttpMethod.POST, "/api/v1/login").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/v1/register").permitAll() // Permitir registro público
+                .requestMatchers(HttpMethod.POST, "/api/v1/register").permitAll()
                 
-                // 1. PERMITIR TODAS LAS PETICIONES OPTIONS (PRE-VUELO CORS)
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // 2. REQUERIR JWT para todo lo que esté bajo /api/v1/
+                .requestMatchers("/api/v1/**").authenticated() 
                 
-                // 2. PERMITIR POST y PUT a la RUTA LITERAL de ÓRDENES y sus sub-recursos (Punto 1 y 2)
-                .requestMatchers(HttpMethod.POST, "/api/v1/ordenes/**").permitAll() // Usamos /** para máxima tolerancia
-                .requestMatchers(HttpMethod.PUT, "/api/v1/ordenes/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/ordenes/**").permitAll() // Permitimos GET para verificación
-                
-                // 3. PERMITIR POST a la RUTA LITERAL de LOGIN
-                .requestMatchers(HttpMethod.POST, "/api/v1/login").permitAll()
-                
-                // 4. AGREGAR EXCLUSIÓN PARA MANEJADOR DE ERRORES (Cubre GET y POST /error)
-                .requestMatchers("/error").permitAll() 
-                
-                // 5. RUTAS DE DOCUMENTACIÓN Y DEMO (también públicas)
-                .requestMatchers("/v3/api-docs/**").permitAll()
-                .requestMatchers("/swagger-ui.html").permitAll()
-                .requestMatchers("/swagger-ui/**").permitAll()
-                .requestMatchers("/ui/**").permitAll()
-                .requestMatchers("/demo/**").permitAll()
-                
-                // 6. CUALQUIER OTRA PETICIÓN REQUIERE AUTENTICACIÓN (JWT)
-                .anyRequest().authenticated());
+                // 3. Cualquier otra ruta (como Swagger o errores) se puede denegar o permitir
+                .anyRequest().authenticated()); // Cambiado de permitAll a authenticated para máxima seguridad
+
+        // Configuración de sesión sin estado (JWT)
+        http.sessionManagement(session -> 
+            session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         
-        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        http.addFilter(new JWTAuthorizationFilter(authenticationManager()));
+        // Agregar el filtro que procesa el token en cada petición
+        http.addFilter(new JWTAuthorizationFilter(authManager));
+
         return http.build();
-
     }
-
 }
