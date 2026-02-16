@@ -25,6 +25,8 @@ public interface IOrdenBusiness {
     // --- PUNTO 5: CONCILIACIÓN ---
     public ConciliacionDTO getConciliacion(int numeroOrden) throws NotFoundException, BusinessException;
 
-    
+
     public void delete(int numeroOrden) throws NotFoundException, BusinessException;
+
+    public void aceptarAlarmaTemperatura(int numeroOrden) throws NotFoundException, BusinessException;
 }

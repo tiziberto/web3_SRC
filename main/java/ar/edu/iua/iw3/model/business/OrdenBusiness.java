@@ -11,6 +11,7 @@ import ar.edu.iua.iw3.model.Orden;
 import ar.edu.iua.iw3.model.Producto;
 import ar.edu.iua.iw3.model.EstadoOrden;
 import ar.edu.iua.iw3.model.persistence.OrdenRepository;
+import ar.edu.iua.iw3.util.EmailBusiness;
 import ar.edu.iua.iw3.model.DetalleCargaDTO;
 import ar.edu.iua.iw3.model.DetalleCarga;
 import ar.edu.iua.iw3.model.persistence.DetalleCargaRepository;
@@ -21,6 +22,7 @@ import ar.edu.iua.iw3.model.ConciliacionDTO;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j; 
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 @Slf4j
@@ -239,6 +241,15 @@ public class OrdenBusiness implements IOrdenBusiness {
     private DetalleCargaRepository detalleCargaDAO;
 
     // --- IMPLEMENTACIÓN DEL PUNTO 3 UNIFICADO ---
+    @Value("${alarma.temperatura.umbral}")
+    private double tempUmbral;
+
+    @Value("${alarma.temperatura.destinatario}")
+    private String tempDestinatario;
+
+    @Autowired
+    private EmailBusiness emailBusiness;
+
     @Override
     public Orden receiveRealTimeData(DetalleCargaDTO data) throws NotFoundException, BusinessException {
         Orden orden = load(data.getNumeroOrden());
@@ -250,22 +261,42 @@ public class OrdenBusiness implements IOrdenBusiness {
                 .build();
         }
 
-        // Verificar Contraseña
-        if (!orden.getPasswordActivacion().equals(data.getPasswordActivacion())) {
-            throw BusinessException.builder().message("Contraseña de activación incorrecta.").build();
-        }
-
         // El dispositivo debe enviar la contraseña en el DTO
         if (data.getPasswordActivacion() == null) {
             throw BusinessException.builder().message("La petición de flujo continuo requiere 'passwordActivacion'.").build();
+        }
+
+        // Verificar Contraseña
+        if (!orden.getPasswordActivacion().equals(data.getPasswordActivacion())) {
+            throw BusinessException.builder().message("Contraseña de activación incorrecta.").build();
         }
         
         boolean datosValidos = isRealTimeDataValid(orden, data);
 
         if (datosValidos) {
-            // Procesar datos: Actualizar cabecera, persistir detalle y chequear alarma
+            // Procesar datos: Actualizar cabecera y persistir detalle
             updateOrderHeader(orden, data);
             persistDetail(orden, data);
+
+            // --- Lógica de Alarma de Temperatura ---
+            // Se verifica si la temperatura supera el umbral configurable
+            if (data.getTemperatura() > tempUmbral) {
+                // Solo se envía si la alarma no fue enviada aún O si la anterior ya fue aceptada
+                if (!orden.isAlarmaTemperaturaEnviada() || orden.isAlarmaTemperaturaAceptada()) {
+                    try {
+                        emailBusiness.sendSimpleMessage(
+                            tempDestinatario, 
+                            "ALERTA: Umbral de temperatura excedido", 
+                            "La orden " + orden.getNumeroOrden() + " registró " + data.getTemperatura() + "°C"
+                        );
+                        // Actualizar flags para evitar reenvíos hasta la aceptación
+                        orden.setAlarmaTemperaturaEnviada(true);
+                        orden.setAlarmaTemperaturaAceptada(false);
+                    } catch (Exception e) {
+                        log.error("Error al enviar correo de alarma: {}", e.getMessage());
+                    }
+                }
+            }
             
             try {
                 return ordenDAO.save(orden);
@@ -279,7 +310,6 @@ public class OrdenBusiness implements IOrdenBusiness {
             return orden; // Devuelve la orden sin modificar si los datos no son válidos
         }
     }
-
     
     // Auxiliar: Lógica de Validación de Datos de Flujo
     private boolean isRealTimeDataValid(Orden orden, DetalleCargaDTO data) {
@@ -458,5 +488,12 @@ public class OrdenBusiness implements IOrdenBusiness {
             log.error(e.getMessage(), e);
             throw BusinessException.builder().ex(e).build();
         }
+    }
+
+    @Override
+    public void aceptarAlarmaTemperatura(int numeroOrden) throws NotFoundException, BusinessException {
+        Orden orden = load(numeroOrden);
+        orden.setAlarmaTemperaturaAceptada(true);
+        ordenDAO.save(orden);
     }
 }

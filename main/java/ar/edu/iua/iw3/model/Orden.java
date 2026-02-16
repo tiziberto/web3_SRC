@@ -41,7 +41,9 @@ import ar.edu.iua.iw3.util.ProductoJsonDeserializer;
 public class Orden implements Serializable {
 
 	private static final long serialVersionUID = 1L;
-
+	private boolean alarmaTemperaturaEnviada = false;
+	private boolean alarmaTemperaturaAceptada = true; 
+	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
