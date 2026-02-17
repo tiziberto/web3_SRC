@@ -41,8 +41,11 @@ import ar.edu.iua.iw3.util.ProductoJsonDeserializer;
 public class Orden implements Serializable {
 
 	private static final long serialVersionUID = 1L;
-	private boolean alarmaTemperaturaEnviada = false;
-	private boolean alarmaTemperaturaAceptada = true; 
+	
+	@Column(columnDefinition = "boolean default false")
+	private boolean alarmaTemperaturaEnviada;
+	@Column(columnDefinition = "boolean default true")
+	private boolean alarmaTemperaturaAceptada; 
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -5,18 +5,22 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 import ar.edu.iua.iw3.auth.IUserBusiness;
 import ar.edu.iua.iw3.auth.custom.CustomAuthenticationManager;
 import ar.edu.iua.iw3.auth.filters.JWTAuthorizationFilter;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfiguration {
 
     @Autowired
@@ -43,9 +47,9 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST, "/api/v1/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/register").permitAll()
                 
-                .requestMatchers(HttpMethod.DELETE, "/api/v1/ordenes/**").hasRole("ADMIN")
+                //.requestMatchers(HttpMethod.DELETE, "/api/v1/ordenes/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/ordenes/**").hasAnyRole("ADMIN", "OPERADOR")
-                .requestMatchers(HttpMethod.PUT, "/api/v1/ordenes/**").hasAnyRole("ADMIN", "OPERADOR")
+                //.requestMatchers(HttpMethod.PUT, "/api/v1/ordenes/**").hasAnyRole("ADMIN", "OPERADOR")
 
                 // 3. El resto de las funciones (GET, etc.) para CUALQUIER rol autenticado
                 .requestMatchers("/api/v1/**").authenticated()
@@ -58,7 +62,11 @@ public class SecurityConfiguration {
             session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         
         // Agregar el filtro que procesa el token en cada petición
-        http.addFilter(new JWTAuthorizationFilter(authManager));
+        http.addFilterBefore(
+            new JWTAuthorizationFilter(),
+            UsernamePasswordAuthenticationFilter.class
+        );
+
 
         return http.build();
     }

@@ -25,6 +25,7 @@ import ar.edu.iua.iw3.util.IStandartResponseBusiness;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ar.edu.iua.iw3.model.ConciliacionDTO;
 import ar.edu.iua.iw3.model.DetalleCargaDTO;
+import ar.edu.iua.iw3.util.StandartResponse;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -175,7 +176,7 @@ public class OrdenRestController extends BaseRestController {
     }
 
     @DeleteMapping(value = "/{numeroOrden}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> delete(@PathVariable int numeroOrden) { // Cambiado a int
         try {
             // Llamamos a la nueva lógica por número de orden
@@ -189,7 +190,7 @@ public class OrdenRestController extends BaseRestController {
     }
 
     @PutMapping(value = "/{numeroOrden}/aceptar-alarma")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_OPERADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<?> aceptarAlarma(@PathVariable int numeroOrden) {
         try {
             ordenBusiness.aceptarAlarmaTemperatura(numeroOrden);

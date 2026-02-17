@@ -252,10 +252,12 @@ public class OrdenBusiness implements IOrdenBusiness {
 
     @Override
     public Orden receiveRealTimeData(DetalleCargaDTO data) throws NotFoundException, BusinessException {
+        log.info("Recibiendo datos en tiempo real para Orden Nro={}", data.getNumeroOrden());
         Orden orden = load(data.getNumeroOrden());
         
         // Validar estado: Debe ser Estado 2
         if (orden.getEstado() != EstadoOrden.ESTADO_2_CON_PESAJE_INICIAL_REGISTRADO) {
+            log.error("Orden {} en estado incorrecto: {}", data.getNumeroOrden(), orden.getEstado());
             throw BusinessException.builder()
                 .message("La Orden Nro=" + data.getNumeroOrden() + " no está lista para iniciar la carga (Estado 2). Estado actual: " + orden.getEstado().getDescripcion())
                 .build();
@@ -263,26 +265,33 @@ public class OrdenBusiness implements IOrdenBusiness {
 
         // El dispositivo debe enviar la contraseña en el DTO
         if (data.getPasswordActivacion() == null) {
+            log.warn("Intento de carga sin contraseña para Orden {}", data.getNumeroOrden());
             throw BusinessException.builder().message("La petición de flujo continuo requiere 'passwordActivacion'.").build();
         }
 
         // Verificar Contraseña
         if (!orden.getPasswordActivacion().equals(data.getPasswordActivacion())) {
+            log.error("Contraseña incorrecta para Orden {}", data.getNumeroOrden());
             throw BusinessException.builder().message("Contraseña de activación incorrecta.").build();
         }
         
         boolean datosValidos = isRealTimeDataValid(orden, data);
 
         if (datosValidos) {
+            log.debug("Datos válidos para Orden {}. Actualizando cabecera y persistiendo detalle.", data.getNumeroOrden());
             // Procesar datos: Actualizar cabecera y persistir detalle
             updateOrderHeader(orden, data);
             persistDetail(orden, data);
 
             // --- Lógica de Alarma de Temperatura ---
-            // Se verifica si la temperatura supera el umbral configurable
+            log.trace("Verificando alarma: Temp recibida {}°C / Umbral {}°C", data.getTemperatura(), tempUmbral);
+            
             if (data.getTemperatura() > tempUmbral) {
+                log.info("¡Umbral superado en Orden {}! Temp: {}°C", data.getNumeroOrden(), data.getTemperatura());
+                
                 // Solo se envía si la alarma no fue enviada aún O si la anterior ya fue aceptada
                 if (!orden.isAlarmaTemperaturaEnviada() || orden.isAlarmaTemperaturaAceptada()) {
+                    log.info("Enviando correo de alerta a {}", tempDestinatario);
                     try {
                         emailBusiness.sendSimpleMessage(
                             tempDestinatario, 
@@ -292,13 +301,17 @@ public class OrdenBusiness implements IOrdenBusiness {
                         // Actualizar flags para evitar reenvíos hasta la aceptación
                         orden.setAlarmaTemperaturaEnviada(true);
                         orden.setAlarmaTemperaturaAceptada(false);
+                        log.debug("Flags de alarma actualizados: Enviada=true, Aceptada=false");
                     } catch (Exception e) {
                         log.error("Error al enviar correo de alarma: {}", e.getMessage());
                     }
+                } else {
+                    log.debug("Alarma ya enviada y pendiente de aceptación para Orden {}. No se reenvía correo.", data.getNumeroOrden());
                 }
             }
             
             try {
+                log.debug("Guardando cambios de la Orden {} en base de datos.", data.getNumeroOrden());
                 return ordenDAO.save(orden);
             } catch (Exception e) {
                 log.error("Error al guardar la orden actualizada: {}", e.getMessage(), e);
@@ -306,40 +319,35 @@ public class OrdenBusiness implements IOrdenBusiness {
             }
 
         } else {
-            log.warn("Datos recibidos para Orden {} descartados por no ser válidos.", orden.getNumeroOrden());
-            return orden; // Devuelve la orden sin modificar si los datos no son válidos
+            log.warn("Datos recibidos para Orden {} descartados por no ser válidos (Caudal/Masa <= 0 o Masa menor a la anterior).", orden.getNumeroOrden());
+            return orden;
         }
     }
     
-    // Auxiliar: Lógica de Validación de Datos de Flujo
     private boolean isRealTimeDataValid(Orden orden, DetalleCargaDTO data) {
-        
-        // Criterios de descarte: Caudal ≤ 0 o Masa acumulada ≤ 0
         if (data.getCaudal() == null || data.getCaudal() <= 0) {
+            log.trace("Dato inválido: Caudal nulo o <= 0");
             return false; 
         }
         
         if (data.getMasaAcumulada() == null || data.getMasaAcumulada() <= 0) {
+            log.trace("Dato inválido: Masa acumulada nula o <= 0");
             return false; 
         }
         
-        // Masa acumulada debe ser mayor que el valor anterior
         if (orden.getUltimaMasaAcumulada() != null && data.getMasaAcumulada() < orden.getUltimaMasaAcumulada()) {
+            log.warn("Dato inválido: Masa acumulada {} es menor que la anterior {}", data.getMasaAcumulada(), orden.getUltimaMasaAcumulada());
             return false; 
         }
         
         return true;
     }
 
-    // Auxiliar: Lógica de Actualización de Cabecera
     private void updateOrderHeader(Orden orden, DetalleCargaDTO data) {
         Date now = new Date();
-        
         if (orden.getFechaInicioCarga() == null) {
-            orden.setFechaInicioCarga(now); 
+            orden.setFechaInicioCarga(now);
         }
-        
-        // Actualizar los últimos valores en la cabecera
         orden.setUltimaMasaAcumulada(data.getMasaAcumulada());
         orden.setUltimaDensidad(data.getDensidad());
         orden.setUltimaTemperatura(data.getTemperatura());
@@ -347,7 +355,6 @@ public class OrdenBusiness implements IOrdenBusiness {
         orden.setEstampaTiempoUltimoDato(now);
     }
     
-    // Auxiliar: Lógica de Persistencia de Detalle
     private void persistDetail(Orden orden, DetalleCargaDTO data) throws BusinessException {
         DetalleCarga detalle = new DetalleCarga();
         detalle.setOrden(orden);
