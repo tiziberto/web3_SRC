@@ -177,9 +177,8 @@ public class OrdenRestController extends BaseRestController {
 
     @DeleteMapping(value = "/{numeroOrden}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> delete(@PathVariable int numeroOrden) { // Cambiado a int
+    public ResponseEntity<?> delete(@PathVariable int numeroOrden) {
         try {
-            // Llamamos a la nueva lógica por número de orden
             ordenBusiness.delete(numeroOrden);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         } catch (NotFoundException e) {
@@ -190,7 +189,7 @@ public class OrdenRestController extends BaseRestController {
     }
 
     @PutMapping(value = "/{numeroOrden}/aceptar-alarma")
-    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> aceptarAlarma(@PathVariable int numeroOrden) {
         try {
             ordenBusiness.aceptarAlarmaTemperatura(numeroOrden);
@@ -199,4 +198,6 @@ public class OrdenRestController extends BaseRestController {
             return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    
 }

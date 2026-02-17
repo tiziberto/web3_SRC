@@ -5,14 +5,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import ar.edu.iua.iw3.auth.IUserBusiness;
 import ar.edu.iua.iw3.auth.custom.CustomAuthenticationManager;
@@ -20,53 +18,49 @@ import ar.edu.iua.iw3.auth.filters.JWTAuthorizationFilter;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfiguration {
 
     @Autowired
     private IUserBusiness userBusiness;
 
+    // 1. Define el método bCryptPasswordEncoder como un Bean
     @Bean
     public PasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // 2. Define el AuthenticationManager usando el método anterior
     @Bean
     public AuthenticationManager authenticationManager() {
+        // Aquí llamamos a bCryptPasswordEncoder() que ya está definido arriba
         return new CustomAuthenticationManager(bCryptPasswordEncoder(), userBusiness);
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // Obtenemos el manager para el filtro de JWT
         AuthenticationManager authManager = authenticationManager();
 
         http.csrf(csrf -> csrf.disable());
         
         http.authorizeHttpRequests(auth -> auth
-                // 1. Permitir acceso público a login y registro
                 .requestMatchers(HttpMethod.POST, "/api/v1/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/register").permitAll()
                 
-                //.requestMatchers(HttpMethod.DELETE, "/api/v1/ordenes/**").hasRole("ADMIN")
+                // Restricción por roles
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/ordenes/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/ordenes/**").hasAnyRole("ADMIN", "OPERADOR")
-                //.requestMatchers(HttpMethod.PUT, "/api/v1/ordenes/**").hasAnyRole("ADMIN", "OPERADOR")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/ordenes/**").hasAnyRole("ADMIN", "OPERADOR")
 
-                // 3. El resto de las funciones (GET, etc.) para CUALQUIER rol autenticado
-                .requestMatchers("/api/v1/**").authenticated()
-                
-                // 3. Cualquier otra ruta (como Swagger o errores) se puede denegar o permitir
-                .anyRequest().authenticated()); // Cambiado de permitAll a authenticated para máxima seguridad
+                // Requiere JWT para el resto de la API
+                .requestMatchers("/api/v1/**").authenticated() 
+                .anyRequest().authenticated());
 
-        // Configuración de sesión sin estado (JWT)
         http.sessionManagement(session -> 
             session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         
-        // Agregar el filtro que procesa el token en cada petición
-        http.addFilterBefore(
-            new JWTAuthorizationFilter(),
-            UsernamePasswordAuthenticationFilter.class
-        );
-
+        // Agregar el filtro de JWT
+        http.addFilter(new JWTAuthorizationFilter(authManager));
 
         return http.build();
     }
