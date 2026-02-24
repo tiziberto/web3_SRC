@@ -44,21 +44,32 @@ public class AuthRestController extends BaseRestController {
     @Autowired
     private IStandartResponseBusiness response;
 
-     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestParam String username, @RequestParam String password) {
+    public static class LoginRequest {
+    public String username;
+    public String password;
+}
+    public static class LoginDTO {
+        public String username;
+        public String password;
+    }
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginDTO data) { // CAMBIADO A @RequestBody
         try {
-            // Autentica usando tu CustomAuthenticationManager
             Authentication auth = authManager.authenticate(
-                ((CustomAuthenticationManager) authManager).authWrap(username, password));
+                ((CustomAuthenticationManager) authManager).authWrap(data.username, data.password));
             
             User user = (User) auth.getPrincipal();
+            
+            // Generación del token...
             String token = JWT.create()
                 .withSubject(user.getUsername())
                 .withClaim("roles", new ArrayList<>(user.getAuthoritiesStr()))
                 .withExpiresAt(new Date(System.currentTimeMillis() + AuthConstants.EXPIRATION_TIME))
                 .sign(Algorithm.HMAC512(AuthConstants.SECRET.getBytes()));
 
-            return new ResponseEntity<>(token, HttpStatus.OK);
+            // Devuelve el token en un formato que el frontend pueda leer fácilmente
+            // Es mejor devolver un objeto JSON { "token": "..." }
+            return new ResponseEntity<>(java.util.Map.of("token", token), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
         }
