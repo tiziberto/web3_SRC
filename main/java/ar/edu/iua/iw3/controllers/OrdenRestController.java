@@ -1,5 +1,9 @@
 package ar.edu.iua.iw3.controllers;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -16,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import ar.edu.iua.iw3.model.ConciliacionDTO;
+import ar.edu.iua.iw3.model.DetalleCargaDTO;
 import ar.edu.iua.iw3.model.Orden;
 import ar.edu.iua.iw3.model.business.BusinessException;
 import ar.edu.iua.iw3.model.business.FoundException;
@@ -23,12 +29,6 @@ import ar.edu.iua.iw3.model.business.IOrdenBusiness;
 import ar.edu.iua.iw3.model.business.NotFoundException;
 import ar.edu.iua.iw3.util.IStandartResponseBusiness;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import ar.edu.iua.iw3.model.ConciliacionDTO;
-import ar.edu.iua.iw3.model.DetalleCargaDTO;
-import ar.edu.iua.iw3.util.StandartResponse;
-
-import java.util.HashMap;
-import java.util.Map;
 
 
 @RestController
@@ -189,7 +189,7 @@ public class OrdenRestController extends BaseRestController {
     }
 
     @PutMapping(value = "/{numeroOrden}/aceptar-alarma")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> aceptarAlarma(@PathVariable int numeroOrden) {
         try {
             ordenBusiness.aceptarAlarmaTemperatura(numeroOrden);
@@ -198,6 +198,17 @@ public class OrdenRestController extends BaseRestController {
             return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    
+
+@GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
+public ResponseEntity<List<Orden>> list() {
+    try {
+        return new ResponseEntity<>(ordenBusiness.list(), HttpStatus.OK);
+    } catch (BusinessException e) {
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
 
     
 }

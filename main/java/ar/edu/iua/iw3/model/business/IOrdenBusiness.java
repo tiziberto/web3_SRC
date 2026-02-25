@@ -1,4 +1,5 @@
 package ar.edu.iua.iw3.model.business;
+import java.util.List;
 
 import ar.edu.iua.iw3.model.ConciliacionDTO;
 import ar.edu.iua.iw3.model.DetalleCargaDTO;
@@ -29,4 +30,6 @@ public interface IOrdenBusiness {
     public void delete(int numeroOrden) throws NotFoundException, BusinessException;
 
     public void aceptarAlarmaTemperatura(int numeroOrden) throws NotFoundException, BusinessException;
+
+    public List<Orden> list() throws BusinessException;
 }

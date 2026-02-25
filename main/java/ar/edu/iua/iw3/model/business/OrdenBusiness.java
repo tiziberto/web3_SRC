@@ -5,24 +5,24 @@ import java.util.Optional;
 import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import ar.edu.iua.iw3.model.Orden;
-import ar.edu.iua.iw3.model.Producto;
-import ar.edu.iua.iw3.model.EstadoOrden;
-import ar.edu.iua.iw3.model.persistence.OrdenRepository;
-import ar.edu.iua.iw3.util.EmailBusiness;
-import ar.edu.iua.iw3.model.DetalleCargaDTO;
-import ar.edu.iua.iw3.model.DetalleCarga;
-import ar.edu.iua.iw3.model.persistence.DetalleCargaRepository;
 import ar.edu.iua.iw3.model.Camion;
 import ar.edu.iua.iw3.model.Chofer;
 import ar.edu.iua.iw3.model.Cliente;
 import ar.edu.iua.iw3.model.ConciliacionDTO;
+import ar.edu.iua.iw3.model.DetalleCarga;
+import ar.edu.iua.iw3.model.DetalleCargaDTO;
+import ar.edu.iua.iw3.model.EstadoOrden;
+import ar.edu.iua.iw3.model.Orden;
+import ar.edu.iua.iw3.model.Producto;
+import ar.edu.iua.iw3.model.persistence.DetalleCargaRepository;
+import ar.edu.iua.iw3.model.persistence.OrdenRepository;
+import ar.edu.iua.iw3.util.EmailBusiness;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import lombok.extern.slf4j.Slf4j; 
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -502,5 +502,16 @@ public class OrdenBusiness implements IOrdenBusiness {
         Orden orden = load(numeroOrden);
         orden.setAlarmaTemperaturaAceptada(true);
         ordenDAO.save(orden);
+    }
+
+
+    @Override
+    public java.util.List<Orden> list() throws BusinessException {
+        try {
+            return ordenDAO.findAll();
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw BusinessException.builder().ex(e).build();
+        }
     }
 }

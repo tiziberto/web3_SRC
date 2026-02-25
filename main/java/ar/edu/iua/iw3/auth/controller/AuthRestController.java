@@ -27,6 +27,10 @@ import ar.edu.iua.iw3.controllers.BaseRestController;
 import ar.edu.iua.iw3.controllers.Constants;
 import ar.edu.iua.iw3.model.business.BusinessException;
 import ar.edu.iua.iw3.util.IStandartResponseBusiness;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @RestController
 @RequestMapping(Constants.URL_BASE) // Esto mapea a /api/v1
@@ -48,9 +52,13 @@ public class AuthRestController extends BaseRestController {
     public String username;
     public String password;
 }
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class LoginDTO {
-        public String username;
-        public String password;
+        private String username;
+        private String password;
     }
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginDTO data) { // CAMBIADO A @RequestBody
