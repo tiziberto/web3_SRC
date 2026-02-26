@@ -83,14 +83,21 @@ public class SecurityConfiguration {
 
         return http.build();
     }
-
+    
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173")); // URL de tu frontend Vue
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        // Agregamos tu dominio DDNS y la versión con y sin www si fuera necesario
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:5173",           // Desarrollo local
+            "https://tiziberto.ddns.net",      // Producción DDNS
+            "http://tiziberto.ddns.net"        // Por si entran por HTTP
+        )); 
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
         configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(List.of("Authorization")); // Importante para que el front pueda leer el token si viene en el header
+    
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
